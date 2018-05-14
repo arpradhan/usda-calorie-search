@@ -75,6 +75,7 @@ type USDASearchClient struct {
 	Max    int
 	Offset int
 	APIKey string
+	Ds     string
 }
 
 type USDANutrientClient struct {
@@ -105,6 +106,7 @@ func NewUSDASearchClient(apiKey string) *USDASearchClient {
 		Max:    5,
 		Offset: 0,
 		APIKey: apiKey,
+		Ds:     "Standard%20Reference",
 	}
 }
 
@@ -134,12 +136,13 @@ func (client *USDANutrientClient) Get(ndbNo string) (*http.Response, error) {
 func (client *USDASearchClient) Get(query string) (*http.Response, error) {
 	query = strings.Replace(query, " ", "%20", -1)
 	url := fmt.Sprintf(
-		"%v?format=%v&sort=%v&max=%v&offset=%v&api_key=%v&q=%v",
+		"%v?format=%v&sort=%v&max=%v&offset=%v&ds=%v&api_key=%v&q=%v",
 		client.URL,
 		client.Format,
 		client.Sort,
 		client.Max,
 		client.Offset,
+		client.Ds,
 		client.APIKey,
 		query,
 	)
