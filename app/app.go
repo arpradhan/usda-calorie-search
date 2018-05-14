@@ -24,10 +24,12 @@ func NewSpecification() *Specification {
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
 	spec := NewSpecification()
 	r.ParseForm()
 	q := r.FormValue("q")
 	if q == "" {
+		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprintf(w, "q parameter is required.")
 	} else {
 		client := usda.NewCalorieSearchClient(spec.APIKey)
@@ -49,6 +51,6 @@ func handler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	http.HandleFunc("/api/v1", handler)
+	http.HandleFunc("/api/v1/foods", handler)
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
