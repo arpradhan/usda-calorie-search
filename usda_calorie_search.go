@@ -146,63 +146,64 @@ func (client *USDASearchClient) Get(query string) (*http.Response, error) {
 	return http.Get(url)
 }
 
-func (client *CalorieSearchClient) Get(query string) *CalorieResponse {
+func (client *CalorieSearchClient) Get(query string) (*CalorieResponse, error) {
 	resp, err := client.USDASearchClient.Get(query)
+	calorieResponse := new(CalorieResponse)
 
 	if err != nil {
-		log.Fatal(err)
+		return calorieResponse, err
 	}
 
 	b, err := ioutil.ReadAll(resp.Body)
 
 	if err != nil {
-		log.Fatal(err)
+		return calorieResponse, err
 	}
 
 	if resp.StatusCode != 200 {
-		log.Fatal(fmt.Errorf("\nURL: %s \nStatus: %s \nBody: %s", resp.Request.URL, resp.Status, b))
+		err = fmt.Errorf("\nURL: %s \nStatus: %s \nBody: %s", resp.Request.URL, resp.Status, b)
+		return calorieResponse, err
 	}
 
 	searchResponse := new(SearchResponse)
 
 	err = json.Unmarshal(b, &searchResponse)
 	if err != nil {
-		log.Fatal(err)
+		return calorieResponse, err
 	}
 
 	if len(searchResponse.List.Item) == 0 {
 		log.Fatal(fmt.Errorf("Food not found"))
 	}
 
-	calorieResponse := new(CalorieResponse)
-
 	for _, item := range searchResponse.List.Item {
 		resp, err = client.USDANutrientClient.Get(item.Ndbno)
 
 		if err != nil {
-			log.Fatal(err)
+			return calorieResponse, err
 		}
 
 		b, err = ioutil.ReadAll(resp.Body)
 
 		if err != nil {
-			log.Fatal(err)
+			return calorieResponse, err
 		}
 
 		if resp.StatusCode != 200 {
-			log.Fatal(fmt.Errorf("\nURL: %s \nStatus: %s \nBody: %s", resp.Request.URL, resp.Status, b))
+			err = fmt.Errorf("\nURL: %s \nStatus: %s \nBody: %s", resp.Request.URL, resp.Status, b)
+			return calorieResponse, err
 		}
 
 		nutrientResponse := new(NutrientResponse)
 
 		err = json.Unmarshal(b, &nutrientResponse)
 		if err != nil {
-			log.Fatal(err)
+			return calorieResponse, err
 		}
 
 		if len(nutrientResponse.Report.Foods) > 0 {
 			calorieResponse.Foods = append(calorieResponse.Foods, nutrientResponse.Report.Foods[0])
 		}
 	}
-	return calorieResponse
+	return calorieResponse, nil
 }

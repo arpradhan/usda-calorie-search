@@ -31,14 +31,19 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "q parameter is required.")
 	} else {
 		client := usda.NewCalorieSearchClient(spec.APIKey)
-		calorieResponse := client.Get(q)
+		calorieResponse, err := client.Get(q)
+
+		if err != nil {
+			log.Fatal(err)
+		}
+
 		b, err := json.Marshal(calorieResponse)
 
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		fmt.Fprint(w, string(b))
+		fmt.Fprintf(w, string(b))
 	}
 
 }

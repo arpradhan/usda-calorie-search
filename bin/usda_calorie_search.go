@@ -24,7 +24,11 @@ func main() {
 	}
 
 	client := usda.NewCalorieSearchClient(*apiKeyPtr)
-	calorieResponse := client.Get(*queryPtr)
+	calorieResponse, err := client.Get(*queryPtr)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	b, err := json.Marshal(calorieResponse)
 
 	if err != nil {
