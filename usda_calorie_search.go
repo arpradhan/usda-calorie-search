@@ -1,7 +1,10 @@
 package usda
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"log"
 	"net/http"
 	"strings"
 )
@@ -71,7 +74,7 @@ type USDASearchClient struct {
 	Sort   string
 	Max    int
 	Offset int
-	ApiKey string
+	APIKey string
 }
 
 type USDANutrientClient struct {
@@ -79,7 +82,19 @@ type USDANutrientClient struct {
 	Format    string
 	Nutrients string
 	Max       int
-	ApiKey    string
+	APIKey    string
+}
+
+type CalorieSearchClient struct {
+	USDASearchClient   *USDASearchClient
+	USDANutrientClient *USDANutrientClient
+}
+
+func NewCalorieSearchClient(apiKey string) *CalorieSearchClient {
+	return &CalorieSearchClient{
+		USDASearchClient:   NewUSDASearchClient(apiKey),
+		USDANutrientClient: NewUSDANutrientClient(apiKey),
+	}
 }
 
 func NewUSDASearchClient(apiKey string) *USDASearchClient {
@@ -89,7 +104,7 @@ func NewUSDASearchClient(apiKey string) *USDASearchClient {
 		Sort:   "n",
 		Max:    5,
 		Offset: 0,
-		ApiKey: apiKey,
+		APIKey: apiKey,
 	}
 }
 
@@ -99,7 +114,7 @@ func NewUSDANutrientClient(apiKey string) *USDANutrientClient {
 		Format:    "json",
 		Nutrients: "208",
 		Max:       1,
-		ApiKey:    apiKey,
+		APIKey:    apiKey,
 	}
 }
 
@@ -110,7 +125,7 @@ func (client *USDANutrientClient) Get(ndbNo string) (*http.Response, error) {
 		client.Format,
 		client.Nutrients,
 		client.Max,
-		client.ApiKey,
+		client.APIKey,
 		ndbNo,
 	)
 	return http.Get(url)
@@ -125,8 +140,69 @@ func (client *USDASearchClient) Get(query string) (*http.Response, error) {
 		client.Sort,
 		client.Max,
 		client.Offset,
-		client.ApiKey,
+		client.APIKey,
 		query,
 	)
 	return http.Get(url)
+}
+
+func (client *CalorieSearchClient) Get(query string) *CalorieResponse {
+	resp, err := client.USDASearchClient.Get(query)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	b, err := ioutil.ReadAll(resp.Body)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if resp.StatusCode != 200 {
+		log.Fatal(fmt.Errorf("\nURL: %s \nStatus: %s \nBody: %s", resp.Request.URL, resp.Status, b))
+	}
+
+	searchResponse := new(SearchResponse)
+
+	err = json.Unmarshal(b, &searchResponse)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if len(searchResponse.List.Item) == 0 {
+		log.Fatal(fmt.Errorf("Food not found"))
+	}
+
+	calorieResponse := new(CalorieResponse)
+
+	for _, item := range searchResponse.List.Item {
+		resp, err = client.USDANutrientClient.Get(item.Ndbno)
+
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		b, err = ioutil.ReadAll(resp.Body)
+
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		if resp.StatusCode != 200 {
+			log.Fatal(fmt.Errorf("\nURL: %s \nStatus: %s \nBody: %s", resp.Request.URL, resp.Status, b))
+		}
+
+		nutrientResponse := new(NutrientResponse)
+
+		err = json.Unmarshal(b, &nutrientResponse)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		if len(nutrientResponse.Report.Foods) > 0 {
+			calorieResponse.Foods = append(calorieResponse.Foods, nutrientResponse.Report.Foods[0])
+		}
+	}
+	return calorieResponse
 }
