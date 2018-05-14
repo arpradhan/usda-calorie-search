@@ -5,18 +5,17 @@ Go app that lists calorie information about foods, given a query.
 ## API
 
 ```
-/api/v1
+/api/v1/foods
 ```
 
 Parameters:
 - q: food query
 
 Example Response:
-```
-/api/v1?q=raw%20onion
-```
 
 ```
+URL: /api/v1/foods?q=raw%20onion
+
 {
   "foods": Array[3][
     {
