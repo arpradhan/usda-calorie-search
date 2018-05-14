@@ -24,6 +24,7 @@ func NewSpecification() *Specification {
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
+
 	w.Header().Set("Content-Type", "application/json")
 	spec := NewSpecification()
 	r.ParseForm()
@@ -31,6 +32,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	if q == "" {
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprintf(w, "q parameter is required.")
+		log.Printf("%v %v %v", r.Method, r.URL, http.StatusBadRequest)
 	} else {
 		client := usda.NewCalorieSearchClient(spec.APIKey)
 		calorieResponse, err := client.Get(q)
@@ -44,7 +46,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			log.Fatal(err)
 		}
-
+		log.Printf("%v %v %v", r.Method, r.URL, http.StatusOK)
 		fmt.Fprintf(w, string(b))
 	}
 
@@ -52,5 +54,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	http.HandleFunc("/api/v1/foods", handler)
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	addr := ":8080"
+	log.Printf("Running app on %v", addr)
+	log.Fatal(http.ListenAndServe(addr, nil))
 }
